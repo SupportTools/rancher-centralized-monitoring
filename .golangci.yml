@@ -8,7 +8,8 @@ run:
   modules-download-mode: readonly
 
 output:
-  format: colored-line-number
+  formats:
+    - format: colored-line-number
   print-issued-lines: true
   print-linter-name: true
   uniq-by-line: true
@@ -52,7 +53,7 @@ linters-settings:
 
   # Code quality linters
   govet:
-    check-shadowing: true
+    shadow: true
     settings:
       printf:
         funcs:
@@ -93,7 +94,6 @@ linters-settings:
       - opinionated
       - performance
       - style
-      - security
     disabled-checks:
       - dupImport # https://github.com/go-critic/go-critic/issues/845
       - ifElseChain
@@ -121,7 +121,7 @@ linters-settings:
     simplify: true
 
   gofumpt:
-    lang-version: "1.22"
+    module-path: github.com/supporttools/rancher-centralized-monitoring
 
   depguard:
     rules:
@@ -169,7 +169,7 @@ linters:
     - goconst        # Repeated strings that could be constants
     - depguard       # Dependency import restrictions
     - asciicheck     # Non-ASCII characters
-    - exportloopref  # Exporting pointers for loop variables
+    - copyloopvar    # Replacement for exportloopref
     - goheader       # Check file headers
     - predeclared    # Misuse of predeclared identifiers
     - nolintlint     # Ill-formed or insufficient nolint directives
