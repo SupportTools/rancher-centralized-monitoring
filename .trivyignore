@@ -1,0 +1,27 @@
+# Trivy ignore file for vulnerability scanning
+# This file allows you to suppress specific vulnerabilities
+
+# Ignore vulnerabilities in test files and example configurations
+# Format: CVE-ID or Package-Name
+
+# Example: Ignore specific CVEs that are not applicable
+# CVE-2021-12345
+
+# Ignore vulnerabilities in build tools (not runtime dependencies)
+# golang.org/x/tools
+
+# Ignore low-severity vulnerabilities in development dependencies
+# Example patterns (remove # to activate):
+# CVE-2023-*:LOW
+# CVE-2023-*:MEDIUM (only if justified)
+
+# Ignore vulnerabilities in base image layers that we can't control
+# These should be periodically reviewed and updated
+# alpine:*
+
+# Temporary ignores (add expiration dates and reasons)
+# CVE-2023-12345 # Expires: 2024-01-01, Reason: Waiting for upstream fix
+
+# Note: Be very careful with ignores in production
+# Always document the reason and expiration date
+# Review ignored vulnerabilities regularly

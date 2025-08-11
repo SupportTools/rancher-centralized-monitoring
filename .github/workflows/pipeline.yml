@@ -1,0 +1,273 @@
+name: CI/CD - v0.3
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  Security:
+    runs-on: ubuntu-latest
+    name: Security Scanning
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Shallow clones should be disabled for better analysis
+
+      # Secrets scanning with GitLeaks
+      - name: Run GitLeaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLEAKS_LICENSE: ${{ secrets.GITLEAKS_LICENSE }}
+
+      # SAST scanning with CodeQL
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: go
+          queries: security-extended,security-and-quality
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: "1.22"
+
+      - name: Build for CodeQL
+        run: |
+          go mod download
+          go build ./...
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: "/language:go"
+
+      # Dependency scanning with Trivy
+      - name: Run Trivy dependency scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          format: 'sarif'
+          output: 'dependency-results.sarif'
+          severity: 'CRITICAL,HIGH,MEDIUM'
+
+      - name: Upload Trivy dependency scan results
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: 'dependency-results.sarif'
+
+      # Dockerfile security scanning
+      - name: Run Trivy Dockerfile scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'config'
+          format: 'sarif'
+          output: 'dockerfile-results.sarif'
+          severity: 'CRITICAL,HIGH,MEDIUM'
+
+      - name: Upload Trivy Dockerfile scan results
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: 'dockerfile-results.sarif'
+
+      # Helm chart security scanning
+      - name: Set up Helm
+        uses: azure/setup-helm@v4.2.0
+
+      - name: Run Checkov on Helm charts
+        uses: bridgecrewio/checkov-action@master
+        with:
+          directory: helm-chart/
+          format: sarif
+          output_file_path: checkov-results.sarif
+          soft_fail: true
+
+      - name: Upload Checkov results
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: checkov-results.sarif
+
+  Test:
+    runs-on: ubuntu-latest
+    needs: Security
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: "1.22"
+
+      - name: Cache Go modules
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-               
+
+      - name: Install static analysis tools
+        run: |
+          curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.62.2
+          go install honnef.co/go/tools/cmd/staticcheck@latest
+          go install github.com/securego/gosec/v2/cmd/gosec@latest
+          go install github.com/psampaz/go-mod-outdated@latest
+          go install github.com/remyoudompheng/go-misc/deadcode@latest
+
+      - name: Go static analysis
+        run: |
+          golangci-lint run ./...
+          staticcheck ./...
+          go vet ./...
+          deadcode .
+
+      - name: Dependency management
+        run: |
+          go mod download
+          go mod verify
+          go mod tidy -v
+          git diff --exit-code go.mod go.sum || (echo "go.mod or go.sum was modified by go mod tidy - please run 'go mod tidy' locally and commit the changes" && exit 1)
+
+      - name: Run tests
+        run: |
+          go test -v -race ./...
+
+      - name: Security scanning with Gosec
+        run: |
+          gosec -fmt sarif -out gosec-results.sarif ./...
+        continue-on-error: true
+
+      - name: Upload Gosec results
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: gosec-results.sarif
+
+  Build:
+    needs: Test
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to DockerHub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Build Docker image locally for scanning
+        run: |
+          docker buildx build \
+          --platform linux/amd64 \
+          --pull \
+          --build-arg VERSION=v${{ github.run_number }} \
+          --build-arg GIT_COMMIT=${{ github.sha }} \
+          --build-arg BUILD_DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ") \
+          --load \
+          -t supporttools/rancher-monitoring-relay:scan \
+          -f Dockerfile .
+
+      # Container image security scanning
+      - name: Run Trivy container scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: 'supporttools/rancher-monitoring-relay:scan'
+          format: 'sarif'
+          output: 'container-results.sarif'
+          severity: 'CRITICAL,HIGH,MEDIUM'
+
+      - name: Upload Trivy container scan results
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: 'container-results.sarif'
+
+      # Run Grype for additional container scanning
+      - name: Run Grype vulnerability scanner
+        uses: anchore/scan-action@v3
+        id: grype-scan
+        with:
+          image: 'supporttools/rancher-monitoring-relay:scan'
+          fail-build: false
+          severity-cutoff: high
+
+      - name: Upload Grype scan results
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: ${{ steps.grype-scan.outputs.sarif }}
+
+      # Push image only if security scans pass
+      - name: Docker build and push
+        run: |
+          docker buildx build \
+          --platform linux/amd64 \
+          --pull \
+          --build-arg VERSION=v${{ github.run_number }} \
+          --build-arg GIT_COMMIT=${{ github.sha }} \
+          --build-arg BUILD_DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ") \
+          --cache-from supporttools/rancher-monitoring-relay:latest \
+          -t supporttools/rancher-monitoring-relay:"0.3.${{ github.run_number }}" \
+          -t supporttools/rancher-monitoring-relay:latest \
+          --push \
+          -f Dockerfile .
+
+  Publish:
+    runs-on: ubuntu-latest
+    needs:
+      - Build
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v4.2.0
+
+      - name: Helm Lint
+        run: helm lint helm-chart/rancher-monitoring-relay/
+
+      - name: Package Helm chart
+        run: |
+          export CHART_VERSION="0.3.${{ github.run_number }}"
+          export APP_VERSION="0.3.${{ github.run_number }}"
+          export IMAGE_TAG="0.3.${{ github.run_number }}"
+          echo "CHART_VERSION=${CHART_VERSION}"
+          echo "APP_VERSION=${APP_VERSION}"
+          envsubst < helm-chart/rancher-monitoring-relay/Chart.yaml.template > helm-chart/rancher-monitoring-relay/Chart.yaml
+          envsubst < helm-chart/rancher-monitoring-relay/values.yaml.template > helm-chart/rancher-monitoring-relay/values.yaml
+          helm package helm-chart/rancher-monitoring-relay --destination helm/repo
+
+      - name: Checkout helm-chart repository
+        uses: actions/checkout@v4
+        with:
+          repository: supporttools/helm-chart
+          path: helm-chart-repo
+          token: ${{ secrets.BOT_TOKEN }}
+
+      - name: Configure Git
+        run: |
+          git config --global user.email "github-action@users.noreply.github.com"
+          git config --global user.name "GitHub Action"
+
+      - name: Update Helm repository
+        run: |
+          cp helm/repo/rancher-monitoring-relay-*.tgz helm-chart-repo/
+          cd helm-chart-repo
+          helm repo index . --url https://charts.support.tools/
+          git add .
+          git commit -m "Update Helm chart for rancher-monitoring-relay"
+          git push

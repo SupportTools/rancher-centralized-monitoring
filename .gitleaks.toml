@@ -1,0 +1,89 @@
+# Gitleaks configuration for secrets detection
+# https://github.com/gitleaks/gitleaks
+
+title = "Rancher Monitoring Relay - GitLeaks Configuration"
+
+# Global settings
+[extend]
+# Use default gitleaks rules as base
+useDefault = true
+
+# Custom rules for Rancher-specific secrets
+[[rules]]
+id = "rancher-api-token"
+description = "Rancher API Token"
+regex = '''(?i)(token-[a-z0-9]{5})'''
+keywords = ["token-"]
+
+[[rules]]
+id = "rancher-api-secret"
+description = "Rancher API Secret Key"
+regex = '''(?i)(rancher.{0,20}secret.{0,20}[=:]\s*[a-z0-9]{40,})'''
+keywords = ["rancher", "secret"]
+
+[[rules]]
+id = "cluster-id"
+description = "Rancher Cluster ID (not sensitive but good to flag)"
+regex = '''(?i)(c-[a-z0-9]{5,})'''
+keywords = ["cluster", "c-"]
+secretGroup = 1
+
+[[rules]]
+id = "kubernetes-secret"
+description = "Kubernetes Secret"
+regex = '''(?i)(kubectl.*secret.*[a-z0-9]{20,})'''
+keywords = ["kubectl", "secret"]
+
+# Allowlist for false positives
+[allowlist]
+description = "Allowlist for false positives"
+paths = [
+  '''.*\.md$''',          # Documentation files
+  '''.*\.txt$''',         # Text files
+  '''.*\.yaml\.template$''', # Template files
+  '''.*\.tpl$''',         # Helm template files
+  '''examples/.*''',      # Example configurations
+  '''docs/.*''',          # Documentation
+  '''.gitleaks.toml''',   # This config file
+]
+
+commits = [
+  # Add commit hashes here if needed to allowlist specific commits
+]
+
+# Regex patterns to ignore
+regexes = [
+  '''(?i)example\.com''',           # Example domains
+  '''(?i)token-xxxxx''',            # Example tokens
+  '''(?i)your-secret-key''',        # Example secrets
+  '''(?i)c-xxxxx''',                # Example cluster IDs
+  '''(?i)c-m-xxxxxxx''',            # Example cluster IDs
+  '''(?i)token-abc123''',           # Example tokens in docs
+  '''(?i)secret.{0,10}key.{0,10}here''', # Example secrets in docs
+  '''(?i)test.{0,10}secret''',      # Test secrets
+  '''(?i)dummy.{0,10}token''',      # Dummy tokens
+  '''(?i)fake.{0,10}key''',         # Fake keys
+  '''<.*>''',                       # HTML/XML tags
+  '''\$\{.*\}''',                   # Variable substitutions
+  '''\$\{\{.*\}\}''',              # Helm template variables
+  '''\\n''',                       # Newline characters in strings
+]
+
+# File extensions to scan
+# Leave empty to scan all files, or specify extensions
+files = []
+
+# Entropy settings for detecting high-entropy strings (potential secrets)
+[allowlist.entropy]
+# Set to 4.0 to reduce false positives from random-looking strings
+# Values between 0.0 and 8.0, higher = more random
+min = 4.0
+max = 8.0
+group = 0
+
+# Stop scanning at first leak (set to false to find all leaks)
+stopOnFirstMatch = false
+
+# Report format (json, csv, sarif)
+# This can be overridden via command line
+reportFormat = "sarif"

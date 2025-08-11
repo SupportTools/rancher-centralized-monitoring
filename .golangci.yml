@@ -1,0 +1,232 @@
+# GolangCI-Lint configuration with security-focused linters
+# https://golangci-lint.run/usage/configuration/
+
+run:
+  timeout: 10m
+  issues-exit-code: 1
+  tests: true
+  modules-download-mode: readonly
+
+output:
+  format: colored-line-number
+  print-issued-lines: true
+  print-linter-name: true
+  uniq-by-line: true
+
+linters-settings:
+  # Security-focused linter configurations
+  gosec:
+    # Enable all security rules
+    includes:
+      - G101 # Look for hard coded credentials
+      - G102 # Bind to all interfaces
+      - G103 # Audit the use of unsafe block
+      - G104 # Audit errors not checked
+      - G105 # Audit the use of math/big.Int.Exp
+      - G106 # Audit the use of ssh.InsecureIgnoreHostKey
+      - G107 # Url provided to HTTP request as taint input
+      - G108 # Profiling endpoint automatically exposed
+      - G109 # Potential Integer overflow made by strconv.Atoi result conversion
+      - G110 # Potential DoS vulnerability via decompression bomb
+      - G201 # SQL query construction using format string
+      - G202 # SQL query construction using string concatenation
+      - G203 # Use of unescaped data in HTML templates
+      - G204 # Audit use of command execution
+      - G301 # Poor file permissions used when creating a directory
+      - G302 # Poor file permissions used when creation file or using chmod
+      - G303 # Creating tempfile using a predictable path
+      - G304 # File path provided as taint input
+      - G305 # File traversal when extracting zip/tar archive
+      - G306 # Poor file permissions used when writing to a new file
+      - G307 # Deferring a method which returns an error
+      - G401 # Detect the usage of DES, RC4, MD5 or SHA1
+      - G402 # Look for bad TLS connection settings
+      - G403 # Ensure minimum RSA key length of 2048 bits
+      - G404 # Insecure random number source (rand)
+      - G501 # Import blocklist: crypto/md5
+      - G502 # Import blocklist: crypto/des
+      - G503 # Import blocklist: crypto/rc4
+      - G504 # Import blocklist: net/http/cgi
+      - G505 # Import blocklist: crypto/sha1
+      - G601 # Implicit memory aliasing of items from a range statement
+
+  # Code quality linters
+  govet:
+    check-shadowing: true
+    settings:
+      printf:
+        funcs:
+          - (github.com/golangci/golangci-lint/pkg/logutils.Log).Infof
+          - (github.com/golangci/golangci-lint/pkg/logutils.Log).Warnf
+          - (github.com/golangci/golangci-lint/pkg/logutils.Log).Errorf
+          - (github.com/golangci/golangci-lint/pkg/logutils.Log).Fatalf
+
+  revive:
+    min-confidence: 0.8
+    rules:
+      - name: var-declaration
+      - name: package-comments
+      - name: range-val-in-closure
+      - name: go-conventions
+      - name: goroutine-parameter
+      - name: unconditional-recursion
+      - name: identical-branches
+      - name: defer-in-loop
+      - name: unexported-return
+      - name: time-naming
+      - name: context-as-argument
+      - name: context-keys-type
+
+  staticcheck:
+    checks: ["all"]
+
+  unused:
+    check-exported: false
+
+  unparam:
+    check-exported: true
+
+  gocritic:
+    enabled-tags:
+      - diagnostic
+      - experimental
+      - opinionated
+      - performance
+      - style
+      - security
+    disabled-checks:
+      - dupImport # https://github.com/go-critic/go-critic/issues/845
+      - ifElseChain
+      - octalLiteral
+      - whyNoLint
+      - wrapperFunc
+
+  gocyclo:
+    min-complexity: 15
+
+  misspell:
+    locale: US
+
+  lll:
+    line-length: 140
+
+  goimports:
+    local-prefixes: github.com/supporttools/rancher-centralized-monitoring
+
+  goconst:
+    min-len: 2
+    min-occurrences: 2
+
+  gofmt:
+    simplify: true
+
+  gofumpt:
+    lang-version: "1.22"
+
+  depguard:
+    rules:
+      main:
+        deny:
+          - pkg: "crypto/md5"
+            desc: "MD5 is cryptographically broken and should not be used"
+          - pkg: "crypto/sha1"
+            desc: "SHA1 is cryptographically broken and should not be used"
+          - pkg: "crypto/des"
+            desc: "DES is cryptographically broken and should not be used"
+          - pkg: "crypto/rc4"
+            desc: "RC4 is cryptographically broken and should not be used"
+          - pkg: "net/http/cgi"
+            desc: "CGI can introduce security vulnerabilities"
+
+linters:
+  disable-all: true
+  enable:
+    # Security linters
+    - gosec          # Security analyzer
+    - govet          # Go vet examines Go source code
+    
+    # Code quality linters  
+    - errcheck       # Check for unchecked errors
+    - staticcheck    # Advanced Go linter
+    - unused         # Check for unused code
+    - ineffassign    # Detect ineffectual assignments
+    - typecheck      # Parse and type-check Go code
+    - revive         # Replacement for golint
+    - gocritic       # Comprehensive Go source code linter
+    - gocyclo        # Cyclomatic complexity
+    - unparam        # Unused function parameters
+    - unconvert      # Unnecessary type conversions
+    
+    # Code formatting linters
+    - gofmt          # Check whether code was gofmt-ed
+    - gofumpt        # Stricter gofmt
+    - goimports      # Fix imports
+    - misspell       # Spelling mistakes
+    - lll            # Line length limit
+    - whitespace     # Whitespace issues
+    
+    # Code consistency linters
+    - goconst        # Repeated strings that could be constants
+    - depguard       # Dependency import restrictions
+    - asciicheck     # Non-ASCII characters
+    - exportloopref  # Exporting pointers for loop variables
+    - goheader       # Check file headers
+    - predeclared    # Misuse of predeclared identifiers
+    - nolintlint     # Ill-formed or insufficient nolint directives
+    
+    # Performance linters
+    - prealloc       # Slice preallocation
+
+issues:
+  # Excluding configuration per-path, per-linter, per-text and per-source
+  exclude-rules:
+    # Exclude some linters from running on tests files.
+    - path: _test\.go
+      linters:
+        - gosec
+        - gocyclo
+        - errcheck
+        - lll
+        - goconst
+        - gochecknoinits
+        - gochecknoglobals
+        
+    # Exclude specific gosec rules in test files
+    - path: _test\.go
+      text: "G404:"  # Insecure random number source (rand) - OK for tests
+      linters:
+        - gosec
+        
+    # Allow long lines in generated files
+    - path: \.pb\.go
+      linters:
+        - lll
+        
+    # Ignore complexity in main.go setup code
+    - path: main\.go
+      text: "cyclomatic complexity"
+      linters:
+        - gocyclo
+
+  # Show only new issues
+  new: false
+  
+  # Maximum issues count per one linter
+  max-issues-per-linter: 0
+  
+  # Maximum count of issues with the same text
+  max-same-issues: 0
+
+  # Show only new issues created after git revision
+  # new-from-rev: HEAD
+
+severity:
+  default-severity: error
+  case-sensitive: false
+  rules:
+    - linters:
+      - gosec
+      severity: error
+    - linters:
+      - revive
+      severity: warning

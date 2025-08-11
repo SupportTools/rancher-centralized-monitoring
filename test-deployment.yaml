@@ -1,0 +1,49 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: echo-test
+  namespace: monitoring
+  labels:
+    app: echo-test
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: echo-test
+  template:
+    metadata:
+      labels:
+        app: echo-test
+    spec:
+      containers:
+      - name: echo
+        image: ealen/echo-server:latest
+        ports:
+        - containerPort: 80
+        env:
+        - name: PORT
+          value: "80"
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "50m"
+          limits:
+            memory: "128Mi"
+            cpu: "100m"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: echo-test
+  namespace: monitoring
+  labels:
+    app: echo-test
+spec:
+  selector:
+    app: echo-test
+  ports:
+  - port: 80
+    targetPort: 80
+    protocol: TCP
+    name: http
+  type: ClusterIP
