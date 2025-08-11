@@ -15,12 +15,14 @@ jobs:
         with:
           fetch-depth: 0  # Shallow clones should be disabled for better analysis
 
-      # Secrets scanning with GitLeaks
-      - name: Run GitLeaks
-        uses: gitleaks/gitleaks-action@v2
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GITLEAKS_LICENSE: ${{ secrets.GITLEAKS_LICENSE }}
+      # Secrets scanning with TruffleHog (alternative to GitLeaks)
+      - name: Run TruffleHog
+        uses: trufflesecurity/trufflehog@main
+        with:
+          path: ./
+          base: main
+          head: HEAD
+          extra_args: --debug --only-verified
 
       # SAST scanning with CodeQL
       - name: Initialize CodeQL
@@ -55,7 +57,7 @@ jobs:
 
       - name: Upload Trivy dependency scan results
         uses: github/codeql-action/upload-sarif@v3
-        if: always()
+        if: always() && hashFiles('dependency-results.sarif') != ''
         with:
           sarif_file: 'dependency-results.sarif'
 
@@ -70,7 +72,7 @@ jobs:
 
       - name: Upload Trivy Dockerfile scan results
         uses: github/codeql-action/upload-sarif@v3
-        if: always()
+        if: always() && hashFiles('dockerfile-results.sarif') != ''
         with:
           sarif_file: 'dockerfile-results.sarif'
 
@@ -88,7 +90,7 @@ jobs:
 
       - name: Upload Checkov results
         uses: github/codeql-action/upload-sarif@v3
-        if: always()
+        if: always() && hashFiles('checkov-results.sarif') != ''
         with:
           sarif_file: checkov-results.sarif
 
@@ -148,7 +150,7 @@ jobs:
 
       - name: Upload Gosec results
         uses: github/codeql-action/upload-sarif@v3
-        if: always()
+        if: always() && hashFiles('gosec-results.sarif') != ''
         with:
           sarif_file: gosec-results.sarif
 
@@ -191,7 +193,7 @@ jobs:
 
       - name: Upload Trivy container scan results
         uses: github/codeql-action/upload-sarif@v3
-        if: always()
+        if: always() && hashFiles('container-results.sarif') != ''
         with:
           sarif_file: 'container-results.sarif'
 
@@ -206,7 +208,7 @@ jobs:
 
       - name: Upload Grype scan results
         uses: github/codeql-action/upload-sarif@v3
-        if: always()
+        if: always() && steps.grype-scan.outputs.sarif != ''
         with:
           sarif_file: ${{ steps.grype-scan.outputs.sarif }}
 
@@ -247,8 +249,12 @@ jobs:
           export IMAGE_TAG="0.3.${{ github.run_number }}"
           echo "CHART_VERSION=${CHART_VERSION}"
           echo "APP_VERSION=${APP_VERSION}"
-          envsubst < helm-chart/rancher-monitoring-relay/Chart.yaml.template > helm-chart/rancher-monitoring-relay/Chart.yaml
-          envsubst < helm-chart/rancher-monitoring-relay/values.yaml.template > helm-chart/rancher-monitoring-relay/values.yaml
+          # Update Chart.yaml version
+          sed -i "s/version: .*/version: ${CHART_VERSION}/" helm-chart/rancher-monitoring-relay/Chart.yaml
+          sed -i "s/appVersion: .*/appVersion: \"${APP_VERSION}\"/" helm-chart/rancher-monitoring-relay/Chart.yaml
+          # Update values.yaml image tag
+          sed -i "s/tag: .*/tag: \"${IMAGE_TAG}\"/" helm-chart/rancher-monitoring-relay/values.yaml
+          mkdir -p helm/repo
           helm package helm-chart/rancher-monitoring-relay --destination helm/repo
 
       - name: Checkout helm-chart repository
