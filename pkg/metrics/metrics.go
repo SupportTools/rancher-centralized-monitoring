@@ -8,8 +8,10 @@ import (
 	"github.com/supporttools/rancher-centralized-monitoring/pkg/logging"
 )
 
-var logger = logging.SetupLogging()
-var startTime = time.Now()
+var (
+	logger    = logging.SetupLogging()
+	startTime = time.Now()
+)
 
 // MetricsHandler returns a simple metrics endpoint handler
 func MetricsHandler() http.HandlerFunc {

@@ -70,7 +70,6 @@ func getEnvOrDefault(key, defaultValue string) string {
 	return value
 }
 
-
 func parseEnvBool(key string) bool {
 	value := os.Getenv(key)
 	boolValue := false

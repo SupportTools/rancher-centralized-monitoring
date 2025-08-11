@@ -6,6 +6,7 @@ import (
 	"runtime"
 
 	"github.com/sirupsen/logrus"
+
 	"github.com/supporttools/rancher-centralized-monitoring/pkg/config"
 )
 
