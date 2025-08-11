@@ -36,7 +36,7 @@ func HealthzHandler() http.HandlerFunc {
 
 		// Test basic Rancher API connectivity
 		client := &http.Client{Timeout: 10 * time.Second}
-		req, err := http.NewRequest("GET", config.CFG.RancherApiEndpoint, nil)
+		req, err := http.NewRequest("GET", config.CFG.RancherApiEndpoint, http.NoBody)
 		if err != nil {
 			logger.Printf("HealthzHandler: Failed to create request: %v", err)
 			http.Error(w, "Service Unavailable", http.StatusServiceUnavailable)

@@ -72,7 +72,7 @@ linters-settings:
       - name: goroutine-parameter
       - name: unconditional-recursion
       - name: identical-branches
-      - name: defer-in-loop
+      # defer-in-loop rule removed - not available
       - name: unexported-return
       - name: time-naming
       - name: context-as-argument
@@ -169,7 +169,7 @@ linters:
     - goconst        # Repeated strings that could be constants
     - depguard       # Dependency import restrictions
     - asciicheck     # Non-ASCII characters
-    - copyloopvar    # Replacement for exportloopref
+    # copyloopvar disabled - requires Go 1.22+
     - goheader       # Check file headers
     - predeclared    # Misuse of predeclared identifiers
     - nolintlint     # Ill-formed or insufficient nolint directives

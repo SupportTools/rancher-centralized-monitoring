@@ -18,9 +18,9 @@ func LogFile() *logrus.Entry {
 	}
 	filename = filepath.Base(filename)
 
-	config := config.LoadConfigFromEnv()
+	cfg := config.LoadConfigFromEnv()
 	// Check if the logger is in debug mode
-	if config.Debug {
+	if cfg.Debug {
 		logFilename := log.WithField("filename", filename).WithField("line", line)
 		return logFilename
 	}
@@ -39,7 +39,7 @@ func SetupLogging() *logrus.Logger {
 	log.SetFormatter(customFormatter)
 
 	// Log as JSON instead of the default ASCII formatter.
-	//log.SetFormatter(&logrus.JSONFormatter{})
+	// log.SetFormatter(&logrus.JSONFormatter{})
 
 	// Output to stderr instead of stdout, could also be a file.
 	log.SetOutput(os.Stderr)

@@ -43,7 +43,7 @@ func BuildLokiURL() string {
 // TestServiceConnectivity tests if a service is reachable via Rancher proxy
 func TestServiceConnectivity(serviceURL, serviceName string) error {
 	client := &http.Client{Timeout: 10 * time.Second}
-	
+
 	// For Loki, test the /ready endpoint
 	testURL := serviceURL
 	if serviceName == "loki" {
@@ -52,28 +52,28 @@ func TestServiceConnectivity(serviceURL, serviceName string) error {
 		testURL += "-/ready"
 	}
 	// For echo-test, just use the root path (no health endpoint needed)
-	
+
 	logger.Printf("Testing connectivity to %s at: %s", serviceName, testURL)
-	
-	req, err := http.NewRequest("GET", testURL, nil)
+
+	req, err := http.NewRequest("GET", testURL, http.NoBody)
 	if err != nil {
 		return fmt.Errorf("error creating request: %v", err)
 	}
-	
+
 	req.SetBasicAuth(config.CFG.RancherApiAccessKey, config.CFG.RancherApiSecretKey)
-	
+
 	resp, err := client.Do(req)
 	if err != nil {
 		return fmt.Errorf("error connecting to %s: %v", serviceName, err)
 	}
 	defer resp.Body.Close()
-	
+
 	logger.Printf("%s responded with status: %d", serviceName, resp.StatusCode)
-	
+
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("%s health check failed, status code: %d", serviceName, resp.StatusCode)
 	}
-	
+
 	logger.Printf("Successfully connected to %s service", serviceName)
 	return nil
 }

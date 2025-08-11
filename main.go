@@ -38,7 +38,7 @@ func main() {
 
 	// Verify access to Rancher API
 	client := &http.Client{Timeout: 10 * time.Second}
-	req, err := http.NewRequest("GET", config.CFG.RancherApiEndpoint, nil)
+	req, err := http.NewRequest("GET", config.CFG.RancherApiEndpoint, http.NoBody)
 	if err != nil {
 		logger.Fatal("Error creating request: ", err)
 	}
@@ -59,7 +59,7 @@ func main() {
 	// Test connectivity to Loki service via proxy
 	lokiURL := proxy.BuildLokiURL()
 	logger.Printf("Testing Loki connectivity at: %s", lokiURL)
-	
+
 	if err := proxy.TestServiceConnectivity(lokiURL, "loki"); err != nil {
 		logger.Printf("Warning: Failed to connect to Loki service: %v", err)
 	}
@@ -68,7 +68,7 @@ func main() {
 	if config.CFG.PrometheusNamespace != "" {
 		prometheusURL := proxy.BuildPrometheusURL()
 		logger.Printf("Testing Prometheus connectivity at: %s", prometheusURL)
-		
+
 		if err := proxy.TestServiceConnectivity(prometheusURL, "prometheus"); err != nil {
 			logger.Printf("Warning: Failed to connect to Prometheus service: %v", err)
 		}
@@ -78,7 +78,7 @@ func main() {
 	if config.CFG.RemoteNamespace != "" && config.CFG.RemoteService != "" && config.CFG.RemotePort != "" {
 		remoteURL := proxy.BuildServiceProxyURL(config.CFG.RemoteNamespace, config.CFG.RemoteService, config.CFG.RemotePort)
 		logger.Printf("Testing remote service connectivity at: %s", remoteURL)
-		
+
 		if err := proxy.TestServiceConnectivity(remoteURL, config.CFG.RemoteService); err != nil {
 			logger.Printf("Warning: Failed to connect to remote service: %v", err)
 		}
@@ -93,16 +93,16 @@ func main() {
 	// Start HTTP server with timeouts (security: prevent slowloris attacks)
 	address := fmt.Sprintf(":%s", config.CFG.MetricsPort)
 	logger.Printf("Starting HTTP server on %s", address)
-	
+
 	server := &http.Server{
-		Addr:           address,
-		Handler:        nil,
-		ReadTimeout:    10 * time.Second,
-		WriteTimeout:   10 * time.Second,
-		IdleTimeout:    120 * time.Second,
+		Addr:              address,
+		Handler:           nil,
+		ReadTimeout:       10 * time.Second,
+		WriteTimeout:      10 * time.Second,
+		IdleTimeout:       120 * time.Second,
 		ReadHeaderTimeout: 5 * time.Second,
 	}
-	
+
 	if err := server.ListenAndServe(); err != nil {
 		logger.Fatalf("HTTP server failed to start: %v", err)
 	}
