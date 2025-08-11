@@ -64,4 +64,3 @@ coverage.html
 
 # Helm packages
 *.tgz
-helm/repo/
