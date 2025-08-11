@@ -110,53 +110,10 @@ jobs:
           --push \
           -f Dockerfile .
 
-  Publish:
-    runs-on: ubuntu-latest
-    needs:
-      - Build
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Set up Helm
-        uses: azure/setup-helm@v4.2.0
-
-      - name: Helm Lint
-        run: helm lint helm-chart/rancher-monitoring-relay/
-
-      - name: Package Helm chart
-        run: |
-          export CHART_VERSION="0.0.${{ github.run_number }}"
-          export APP_VERSION="0.0.${{ github.run_number }}"
-          export IMAGE_TAG="0.0.${{ github.run_number }}"
-          echo "CHART_VERSION=${CHART_VERSION}"
-          echo "APP_VERSION=${APP_VERSION}"
-          # Update Chart.yaml version
-          sed -i "s/version: .*/version: ${CHART_VERSION}/" helm-chart/rancher-monitoring-relay/Chart.yaml
-          sed -i "s/appVersion: .*/appVersion: \"${APP_VERSION}\"/" helm-chart/rancher-monitoring-relay/Chart.yaml
-          # Update values.yaml image tag
-          sed -i "s/tag: .*/tag: \"${IMAGE_TAG}\"/" helm-chart/rancher-monitoring-relay/values.yaml
-          mkdir -p helm/repo
-          helm package helm-chart/rancher-monitoring-relay --destination helm/repo
-
-      - name: Checkout helm-chart repository
-        uses: actions/checkout@v4
-        with:
-          repository: supporttools/helm-chart
-          path: helm-chart-repo
-          token: ${{ secrets.BOT_TOKEN }}
-
-      - name: Configure Git
-        run: |
-          git config --global user.email "github-action@users.noreply.github.com"
-          git config --global user.name "GitHub Action"
-
-      - name: Update Helm repository
-        run: |
-          cp helm/repo/rancher-monitoring-relay-*.tgz helm-chart-repo/
-          cd helm-chart-repo
-          helm repo index . --url https://charts.support.tools/
-          git add .
-          git commit -m "Update Helm chart for rancher-monitoring-relay"
-          git push
+  # Publish:
+  #   runs-on: ubuntu-latest
+  #   needs:
+  #     - Build
+  #   steps:
+  #     - name: Package Helm chart
+  #       run: echo "Helm publishing disabled for now"
