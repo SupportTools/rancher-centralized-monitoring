@@ -21,7 +21,7 @@ ARG BUILD_DATE
 # Build the Go app with versioning information
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -installsuffix cgo \
 -ldflags "-X github.com/supporttools/rancher-centralized-monitoring/pkg/health.version=$VERSION -X github.com/supporttools/rancher-centralized-monitoring/pkg/health.GitCommit=$GIT_COMMIT -X github.com/supporttools/rancher-centralized-monitoring/pkg/health.BuildTime=$BUILD_DATE" \
--o /bin/rancher-monitoring-relay
+-o /bin/rancher-centralized-monitoring
 
 # Start from scratch for the runtime stage
 FROM scratch
@@ -33,7 +33,7 @@ WORKDIR /root/
 COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 
 # Copy the built binary and config file from the builder stage
-COPY --from=builder /bin/rancher-monitoring-relay /bin/
+COPY --from=builder /bin/rancher-centralized-monitoring /bin/
 
 # Set the binary as the entrypoint of the container
-ENTRYPOINT ["/bin/rancher-monitoring-relay"]
+ENTRYPOINT ["/bin/rancher-centralized-monitoring"]

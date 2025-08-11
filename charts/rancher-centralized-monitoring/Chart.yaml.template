@@ -1,0 +1,19 @@
+apiVersion: v2
+name: rancher-centralized-monitoring
+description: A Helm chart for Rancher Centralized Monitoring Relay
+type: application
+version: ${CHART_VERSION}
+appVersion: "${APP_VERSION}"
+keywords:
+  - rancher
+  - monitoring
+  - prometheus
+  - loki
+  - relay
+  - proxy
+home: https://github.com/supporttools/rancher-centralized-monitoring
+sources:
+  - https://github.com/supporttools/rancher-centralized-monitoring
+maintainers:
+  - name: Support Tools
+    url: https://support.tools

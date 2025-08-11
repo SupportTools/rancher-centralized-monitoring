@@ -1,0 +1,139 @@
+# Default values for rancher-centralized-monitoring
+
+replicaCount: 1
+
+image:
+  repository: supporttools/rancher-centralized-monitoring
+  pullPolicy: IfNotPresent
+  tag: "${IMAGE_TAG}"
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+# Rancher configuration
+rancher:
+  # Rancher API endpoint (required)
+  apiEndpoint: ""
+  # Cluster ID to monitor (required)
+  clusterId: ""
+  # Cluster name (optional, for logging)
+  clusterName: ""
+  # API credentials - use existing secret or create inline
+  auth:
+    # Use existing secret (recommended for production)
+    existingSecret: ""
+    # Keys in the existing secret
+    accessKeySecretKey: "access-key"
+    secretKeySecretKey: "secret-key"
+    # Inline credentials (not recommended for production)
+    accessKey: ""
+    secretKey: ""
+
+# Monitoring service configuration
+monitoring:
+  # Prometheus configuration
+  prometheus:
+    namespace: "monitoring"
+    service: "prometheus"
+    port: "9090"
+  
+  # Loki configuration
+  loki:
+    namespace: "monitoring"
+    service: "loki"
+    port: "3100"
+  
+  # Custom remote service configuration
+  remote:
+    namespace: ""
+    service: ""
+    port: ""
+
+# Application configuration
+app:
+  # Enable debug logging
+  debug: false
+  # Metrics port
+  metricsPort: 9000
+
+serviceAccount:
+  # Specifies whether a service account should be created
+  create: true
+  # Annotations to add to the service account
+  annotations: {}
+  # The name of the service account to use.
+  name: ""
+
+podAnnotations: {}
+
+podSecurityContext:
+  fsGroup: 1001
+  runAsGroup: 1001
+  runAsNonRoot: true
+  runAsUser: 1001
+
+securityContext:
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+    - ALL
+  readOnlyRootFilesystem: true
+  runAsNonRoot: true
+  runAsUser: 1001
+
+service:
+  type: ClusterIP
+  port: 9000
+  targetPort: 9000
+
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+  hosts:
+    - host: monitoring-relay.local
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+
+resources:
+  limits:
+    cpu: 200m
+    memory: 256Mi
+  requests:
+    cpu: 100m
+    memory: 128Mi
+
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 3
+  targetCPUUtilizationPercentage: 80
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
+
+# Monitoring and observability
+monitoring:
+  # Enable ServiceMonitor for Prometheus scraping
+  serviceMonitor:
+    enabled: false
+    interval: 30s
+    scrapeTimeout: 10s
+    labels: {}
+    annotations: {}
+
+# Health check configuration
+healthCheck:
+  enabled: true
+  path: /health
+  initialDelaySeconds: 10
+  periodSeconds: 30
+  timeoutSeconds: 5
+  successThreshold: 1
+  failureThreshold: 3

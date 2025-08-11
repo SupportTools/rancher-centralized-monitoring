@@ -1,0 +1,274 @@
+questions:
+  # Rancher Configuration
+  - variable: rancher.apiEndpoint
+    default: ""
+    description: "Rancher API endpoint URL (e.g., https://rancher.example.com/v3)"
+    label: "Rancher API Endpoint"
+    type: string
+    required: true
+    group: "Rancher Configuration"
+  - variable: rancher.clusterId
+    default: ""
+    description: "Target cluster ID to monitor (e.g., c-m-12345678)"
+    label: "Cluster ID"
+    type: string
+    required: true
+    group: "Rancher Configuration"
+  - variable: rancher.clusterName
+    default: ""
+    description: "Human-readable cluster name for logging (optional)"
+    label: "Cluster Name"
+    type: string
+    group: "Rancher Configuration"
+  - variable: rancher.auth.existingSecret
+    default: ""
+    description: "Name of existing secret containing API credentials (recommended for production)"
+    label: "Existing Secret Name"
+    type: string
+    group: "Rancher Configuration"
+  - variable: rancher.auth.accessKey
+    default: ""
+    description: "Rancher API access key (not recommended for production)"
+    label: "API Access Key"
+    type: string
+    group: "Rancher Configuration"
+    show_if: "rancher.auth.existingSecret="
+  - variable: rancher.auth.secretKey
+    default: ""
+    description: "Rancher API secret key (not recommended for production)"
+    label: "API Secret Key"
+    type: password
+    group: "Rancher Configuration"
+    show_if: "rancher.auth.existingSecret="
+
+  # Monitoring Services Configuration
+  - variable: monitoring.prometheus.namespace
+    default: "cattle-monitoring-system"
+    description: "Namespace where Prometheus service is running in the target cluster"
+    label: "Prometheus Namespace"
+    type: string
+    group: "Prometheus Configuration"
+  - variable: monitoring.prometheus.service
+    default: "rancher-monitoring-prometheus"
+    description: "Name of the Prometheus service in the target cluster"
+    label: "Prometheus Service Name"
+    type: string
+    group: "Prometheus Configuration"
+  - variable: monitoring.prometheus.port
+    default: "9090"
+    description: "Port of the Prometheus service in the target cluster"
+    label: "Prometheus Port"
+    type: string
+    group: "Prometheus Configuration"
+
+  - variable: monitoring.loki.namespace
+    default: "cattle-logging-system"
+    description: "Namespace where Loki service is running in the target cluster"
+    label: "Loki Namespace"
+    type: string
+    group: "Loki Configuration"
+  - variable: monitoring.loki.service
+    default: "rancher-logging-loki"
+    description: "Name of the Loki service in the target cluster"
+    label: "Loki Service Name"
+    type: string
+    group: "Loki Configuration"
+  - variable: monitoring.loki.port
+    default: "3100"
+    description: "Port of the Loki service in the target cluster"
+    label: "Loki Port"
+    type: string
+    group: "Loki Configuration"
+
+  - variable: monitoring.remote.namespace
+    default: ""
+    description: "Custom service namespace (leave empty if not using custom service)"
+    label: "Custom Namespace"
+    type: string
+    group: "Custom Service Configuration"
+  - variable: monitoring.remote.service
+    default: ""
+    description: "Custom service name (leave empty if not using custom service)"
+    label: "Custom Service Name"
+    type: string
+    group: "Custom Service Configuration"
+  - variable: monitoring.remote.port
+    default: ""
+    description: "Custom service port (leave empty if not using custom service)"
+    label: "Custom Service Port"
+    type: string
+    group: "Custom Service Configuration"
+
+  # Application Settings
+  - variable: app.debug
+    default: false
+    description: "Enable debug logging and detailed caller information"
+    label: "Debug Mode"
+    type: bool
+    group: "Application Settings"
+  - variable: app.metricsPort
+    default: 9000
+    description: "Port for the metrics endpoint"
+    label: "Metrics Port"
+    type: int
+    group: "Application Settings"
+
+  # Container Configuration
+  - variable: image.tag
+    default: "latest"
+    description: "Container image tag"
+    label: "Image Tag"
+    type: string
+    group: "Container Settings"
+  - variable: replicaCount
+    default: 1
+    description: "Number of replica pods"
+    label: "Replica Count"
+    type: int
+    group: "Container Settings"
+
+  # Resource Configuration
+  - variable: resources.requests.cpu
+    default: "100m"
+    description: "CPU resource request"
+    label: "CPU Request"
+    type: string
+    group: "Resource Settings"
+  - variable: resources.requests.memory
+    default: "128Mi"
+    description: "Memory resource request"
+    label: "Memory Request"
+    type: string
+    group: "Resource Settings"
+  - variable: resources.limits.cpu
+    default: "200m"
+    description: "CPU resource limit"
+    label: "CPU Limit"
+    type: string
+    group: "Resource Settings"
+  - variable: resources.limits.memory
+    default: "256Mi"
+    description: "Memory resource limit"
+    label: "Memory Limit"
+    type: string
+    group: "Resource Settings"
+
+  # Scaling Configuration
+  - variable: autoscaling.enabled
+    default: false
+    description: "Enable horizontal pod autoscaling"
+    label: "Enable Autoscaling"
+    type: bool
+    group: "Scaling Settings"
+  - variable: autoscaling.minReplicas
+    default: 1
+    description: "Minimum number of replicas when autoscaling"
+    label: "Min Replicas"
+    type: int
+    group: "Scaling Settings"
+    show_if: "autoscaling.enabled=true"
+  - variable: autoscaling.maxReplicas
+    default: 3
+    description: "Maximum number of replicas when autoscaling"
+    label: "Max Replicas"
+    type: int
+    group: "Scaling Settings"
+    show_if: "autoscaling.enabled=true"
+  - variable: autoscaling.targetCPUUtilizationPercentage
+    default: 80
+    description: "Target CPU utilization percentage for autoscaling"
+    label: "Target CPU %"
+    type: int
+    group: "Scaling Settings"
+    show_if: "autoscaling.enabled=true"
+
+  # Service Configuration
+  - variable: service.type
+    default: "ClusterIP"
+    description: "Kubernetes service type"
+    label: "Service Type"
+    type: enum
+    options:
+      - "ClusterIP"
+      - "NodePort"
+      - "LoadBalancer"
+    group: "Service Settings"
+  - variable: service.port
+    default: 9000
+    description: "Service port"
+    label: "Service Port"
+    type: int
+    group: "Service Settings"
+
+  # Ingress Configuration
+  - variable: ingress.enabled
+    default: false
+    description: "Enable ingress for external access"
+    label: "Enable Ingress"
+    type: bool
+    group: "Ingress Settings"
+  - variable: ingress.className
+    default: ""
+    description: "Ingress class name"
+    label: "Ingress Class"
+    type: string
+    group: "Ingress Settings"
+    show_if: "ingress.enabled=true"
+  - variable: ingress.hosts[0].host
+    default: "monitoring-relay.local"
+    description: "Ingress hostname"
+    label: "Hostname"
+    type: string
+    group: "Ingress Settings"
+    show_if: "ingress.enabled=true"
+
+  # Observability Settings
+  - variable: observability.serviceMonitor.enabled
+    default: false
+    description: "Enable Prometheus ServiceMonitor for automatic metrics scraping"
+    label: "Enable ServiceMonitor"
+    type: bool
+    group: "Observability Settings"
+  - variable: observability.serviceMonitor.interval
+    default: "30s"
+    description: "Prometheus scrape interval"
+    label: "Scrape Interval"
+    type: string
+    group: "Observability Settings"
+    show_if: "observability.serviceMonitor.enabled=true"
+  - variable: observability.serviceMonitor.scrapeTimeout
+    default: "10s"
+    description: "Prometheus scrape timeout"
+    label: "Scrape Timeout"
+    type: string
+    group: "Observability Settings"
+    show_if: "observability.serviceMonitor.enabled=true"
+
+  # Health Check Settings
+  - variable: healthCheck.enabled
+    default: true
+    description: "Enable health check probes"
+    label: "Enable Health Checks"
+    type: bool
+    group: "Health Check Settings"
+  - variable: healthCheck.path
+    default: "/health"
+    description: "Health check endpoint path"
+    label: "Health Check Path"
+    type: string
+    group: "Health Check Settings"
+    show_if: "healthCheck.enabled=true"
+  - variable: healthCheck.initialDelaySeconds
+    default: 10
+    description: "Initial delay before health checks start"
+    label: "Initial Delay (seconds)"
+    type: int
+    group: "Health Check Settings"
+    show_if: "healthCheck.enabled=true"
+  - variable: healthCheck.periodSeconds
+    default: 30
+    description: "How often to perform health checks"
+    label: "Period (seconds)"
+    type: int
+    group: "Health Check Settings"
+    show_if: "healthCheck.enabled=true"

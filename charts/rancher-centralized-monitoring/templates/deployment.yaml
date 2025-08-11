@@ -1,0 +1,122 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "rancher-monitoring-relay.fullname" . }}
+  labels:
+    {{- include "rancher-monitoring-relay.labels" . | nindent 4 }}
+spec:
+  {{- if not .Values.autoscaling.enabled }}
+  replicas: {{ .Values.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "rancher-monitoring-relay.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "rancher-monitoring-relay.selectorLabels" . | nindent 8 }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "rancher-monitoring-relay.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: {{ .Chart.Name }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: metrics
+              containerPort: {{ .Values.app.metricsPort }}
+              protocol: TCP
+          env:
+            - name: DEBUG
+              value: {{ .Values.app.debug | quote }}
+            - name: METRICS_PORT
+              value: {{ .Values.app.metricsPort | quote }}
+            - name: RANCHER_API_ENDPOINT
+              value: {{ .Values.rancher.apiEndpoint | quote }}
+            - name: CLUSTER_ID
+              value: {{ .Values.rancher.clusterId | quote }}
+            {{- if .Values.rancher.clusterName }}
+            - name: CLUSTER_NAME
+              value: {{ .Values.rancher.clusterName | quote }}
+            {{- end }}
+            - name: RANCHER_API_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "rancher-monitoring-relay.secretName" . }}
+                  key: {{ .Values.rancher.auth.accessKeySecretKey }}
+            - name: RANCHER_API_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "rancher-monitoring-relay.secretName" . }}
+                  key: {{ .Values.rancher.auth.secretKeySecretKey }}
+            # Prometheus configuration
+            - name: PROMETHEUS_NAMESPACE
+              value: {{ .Values.monitoring.prometheus.namespace | quote }}
+            - name: PROMETHEUS_SERVICE
+              value: {{ .Values.monitoring.prometheus.service | quote }}
+            - name: PROMETHEUS_PORT
+              value: {{ .Values.monitoring.prometheus.port | quote }}
+            # Loki configuration
+            - name: LOKI_NAMESPACE
+              value: {{ .Values.monitoring.loki.namespace | quote }}
+            - name: LOKI_SERVICE
+              value: {{ .Values.monitoring.loki.service | quote }}
+            - name: LOKI_PORT
+              value: {{ .Values.monitoring.loki.port | quote }}
+            # Remote service configuration
+            {{- if .Values.monitoring.remote.namespace }}
+            - name: REMOTE_NAMESPACE
+              value: {{ .Values.monitoring.remote.namespace | quote }}
+            {{- end }}
+            {{- if .Values.monitoring.remote.service }}
+            - name: REMOTE_SERVICE
+              value: {{ .Values.monitoring.remote.service | quote }}
+            {{- end }}
+            {{- if .Values.monitoring.remote.port }}
+            - name: REMOTE_PORT
+              value: {{ .Values.monitoring.remote.port | quote }}
+            {{- end }}
+          {{- if .Values.healthCheck.enabled }}
+          livenessProbe:
+            httpGet:
+              path: {{ .Values.healthCheck.path }}
+              port: metrics
+            initialDelaySeconds: {{ .Values.healthCheck.initialDelaySeconds }}
+            periodSeconds: {{ .Values.healthCheck.periodSeconds }}
+            timeoutSeconds: {{ .Values.healthCheck.timeoutSeconds }}
+            failureThreshold: {{ .Values.healthCheck.failureThreshold }}
+          readinessProbe:
+            httpGet:
+              path: {{ .Values.healthCheck.path }}
+              port: metrics
+            initialDelaySeconds: {{ .Values.healthCheck.initialDelaySeconds }}
+            periodSeconds: {{ .Values.healthCheck.periodSeconds }}
+            timeoutSeconds: {{ .Values.healthCheck.timeoutSeconds }}
+            successThreshold: {{ .Values.healthCheck.successThreshold }}
+            failureThreshold: {{ .Values.healthCheck.failureThreshold }}
+          {{- end }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
