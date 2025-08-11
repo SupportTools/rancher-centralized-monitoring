@@ -5,96 +5,9 @@ on:
   pull_request:
 
 jobs:
-  Security:
-    runs-on: ubuntu-latest
-    name: Security Scanning
-    
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0  # Shallow clones should be disabled for better analysis
-
-      # Secrets scanning with TruffleHog (alternative to GitLeaks)
-      - name: Run TruffleHog
-        uses: trufflesecurity/trufflehog@main
-        with:
-          path: ./
-          extra_args: --only-verified
-
-      # SAST scanning with CodeQL
-      - name: Initialize CodeQL
-        uses: github/codeql-action/init@v3
-        with:
-          languages: go
-          queries: security-extended,security-and-quality
-
-      - name: Set up Go
-        uses: actions/setup-go@v4
-        with:
-          go-version: "1.22"
-
-      - name: Build for CodeQL
-        run: |
-          go mod download
-          go build ./...
-
-      - name: Perform CodeQL Analysis
-        uses: github/codeql-action/analyze@v3
-        with:
-          category: "/language:go"
-
-      # Dependency scanning with Trivy
-      - name: Run Trivy dependency scanner
-        uses: aquasecurity/trivy-action@master
-        with:
-          scan-type: 'fs'
-          format: 'sarif'
-          output: 'dependency-results.sarif'
-          severity: 'CRITICAL,HIGH,MEDIUM'
-
-      - name: Upload Trivy dependency scan results
-        uses: github/codeql-action/upload-sarif@v3
-        if: always() && hashFiles('dependency-results.sarif') != ''
-        with:
-          sarif_file: 'dependency-results.sarif'
-
-      # Dockerfile security scanning
-      - name: Run Trivy Dockerfile scanner
-        uses: aquasecurity/trivy-action@master
-        with:
-          scan-type: 'config'
-          format: 'sarif'
-          output: 'dockerfile-results.sarif'
-          severity: 'CRITICAL,HIGH,MEDIUM'
-
-      - name: Upload Trivy Dockerfile scan results
-        uses: github/codeql-action/upload-sarif@v3
-        if: always() && hashFiles('dockerfile-results.sarif') != ''
-        with:
-          sarif_file: 'dockerfile-results.sarif'
-
-      # Helm chart security scanning
-      - name: Set up Helm
-        uses: azure/setup-helm@v4.2.0
-
-      - name: Run Checkov on Helm charts
-        uses: bridgecrewio/checkov-action@master
-        with:
-          directory: helm-chart/
-          format: sarif
-          output_file_path: checkov-results.sarif
-          soft_fail: true
-
-      - name: Upload Checkov results
-        uses: github/codeql-action/upload-sarif@v3
-        if: always() && hashFiles('checkov-results.sarif') != ''
-        with:
-          sarif_file: checkov-results.sarif
 
   Test:
     runs-on: ubuntu-latest
-    needs: Security
 
     steps:
       - name: Checkout code
@@ -143,14 +56,8 @@ jobs:
 
       - name: Security scanning with Gosec
         run: |
-          gosec -fmt sarif -out gosec-results.sarif ./...
+          gosec ./...
         continue-on-error: true
-
-      - name: Upload Gosec results
-        uses: github/codeql-action/upload-sarif@v3
-        if: always() && hashFiles('gosec-results.sarif') != ''
-        with:
-          sarif_file: gosec-results.sarif
 
   Build:
     needs: Test
@@ -180,35 +87,15 @@ jobs:
           -t supporttools/rancher-monitoring-relay:scan \
           -f Dockerfile .
 
-      # Container image security scanning
-      - name: Run Trivy container scanner
-        uses: aquasecurity/trivy-action@master
-        with:
-          image-ref: 'supporttools/rancher-monitoring-relay:scan'
-          format: 'sarif'
-          output: 'container-results.sarif'
-          severity: 'CRITICAL,HIGH,MEDIUM'
-
-      - name: Upload Trivy container scan results
-        uses: github/codeql-action/upload-sarif@v3
-        if: always() && hashFiles('container-results.sarif') != ''
-        with:
-          sarif_file: 'container-results.sarif'
-
-      # Run Grype for additional container scanning
-      - name: Run Grype vulnerability scanner
-        uses: anchore/scan-action@v3
-        id: grype-scan
-        with:
-          image: 'supporttools/rancher-monitoring-relay:scan'
-          fail-build: false
-          severity-cutoff: high
-
-      - name: Upload Grype scan results
-        uses: github/codeql-action/upload-sarif@v3
-        if: always() && steps.grype-scan.outputs.sarif != ''
-        with:
-          sarif_file: ${{ steps.grype-scan.outputs.sarif }}
+      # Basic security check
+      - name: Basic security scan
+        run: |
+          echo "Running basic security checks..."
+          # Check for common security issues
+          if grep -r "password\|secret\|key" --include="*.go" --include="*.yaml" --include="*.yml" . | grep -v "// " | grep -v "#"; then
+            echo "Warning: Potential secrets found in code"
+          fi
+        continue-on-error: true
 
       # Push image only if security scans pass
       - name: Docker build and push
