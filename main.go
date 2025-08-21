@@ -114,7 +114,7 @@ func main() {
 	if config.CFG.PrometheusNamespace != "" {
 		prometheusMux := http.NewServeMux()
 		prometheusMux.HandleFunc("/", proxy.PrometheusHandler())
-		
+
 		prometheusAddress := ":9090"
 		logger.Printf("Starting Prometheus proxy server on %s -> %s", prometheusAddress, proxy.BuildPrometheusURL())
 
@@ -138,7 +138,7 @@ func main() {
 	// Setup Loki proxy server on port 3100
 	lokiMux := http.NewServeMux()
 	lokiMux.HandleFunc("/", proxy.LokiHandler())
-	
+
 	lokiAddress := ":3100"
 	logger.Printf("Starting Loki proxy server on %s -> %s", lokiAddress, proxy.BuildLokiURL())
 
@@ -162,10 +162,10 @@ func main() {
 	if config.CFG.RemoteNamespace != "" && config.CFG.RemoteService != "" && config.CFG.RemotePort != "" {
 		remoteMux := http.NewServeMux()
 		remoteMux.HandleFunc("/", proxy.RemoteServiceHandler())
-		
+
 		remoteAddress := fmt.Sprintf(":%s", config.CFG.RemotePort)
-		logger.Printf("Starting remote service proxy on %s -> %s", 
-			remoteAddress, 
+		logger.Printf("Starting remote service proxy on %s -> %s",
+			remoteAddress,
 			proxy.BuildServiceProxyURL(config.CFG.RemoteNamespace, config.CFG.RemoteService, config.CFG.RemotePort))
 
 		remoteServer := &http.Server{
@@ -186,7 +186,7 @@ func main() {
 	}
 
 	logger.Println("All proxy servers started successfully")
-	
+
 	// Keep the main goroutine alive
 	select {}
 }

@@ -158,7 +158,7 @@ func RemoteServiceHandler() http.HandlerFunc {
 			http.Error(w, "Remote service not configured", http.StatusServiceUnavailable)
 		}
 	}
-	
+
 	remoteURL := BuildServiceProxyURL(config.CFG.RemoteNamespace, config.CFG.RemoteService, config.CFG.RemotePort)
 	return createProxyHandler(remoteURL, config.CFG.RemoteService)
 }
