@@ -63,6 +63,7 @@ Optional variables:
 - `DEBUG=true` - Enable debug logging and detailed caller information
 - `METRICS_PORT` - Port for metrics endpoint (default: 9000)
 - `CLUSTER_NAME` - Human-readable cluster name
+- `RANCHER_INSECURE_SKIP_VERIFY=true` - Skip TLS certificate verification for internal Rancher services (default: false)
 
 ## Remote Endpoint Configuration
 

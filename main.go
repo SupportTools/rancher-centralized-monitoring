@@ -1,6 +1,7 @@
 package main
 
 import (
+	"crypto/tls"
 	"fmt"
 	"net/http"
 	"time"
@@ -37,7 +38,14 @@ func main() {
 	}
 
 	// Verify access to Rancher API
-	client := &http.Client{Timeout: 10 * time.Second}
+	client := &http.Client{
+		Timeout: 10 * time.Second,
+		Transport: &http.Transport{
+			TLSClientConfig: &tls.Config{
+				InsecureSkipVerify: config.CFG.RancherInsecureSkipVerify,
+			},
+		},
+	}
 	req, err := http.NewRequest("GET", config.CFG.RancherApiEndpoint, http.NoBody)
 	if err != nil {
 		logger.Fatal("Error creating request: ", err)

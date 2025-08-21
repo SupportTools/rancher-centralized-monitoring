@@ -19,6 +19,8 @@ rancher:
   clusterId: ""
   # Cluster name (optional, for logging)
   clusterName: ""
+  # Skip TLS verification for internal Rancher service (default: false)
+  insecureSkipVerify: false
   # API credentials - use existing secret or create inline
   auth:
     # Use existing secret (recommended for production)
@@ -84,8 +86,6 @@ securityContext:
 
 service:
   type: ClusterIP
-  port: 9000
-  targetPort: 9000
 
 ingress:
   enabled: false

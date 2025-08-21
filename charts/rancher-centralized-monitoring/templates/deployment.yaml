@@ -34,9 +34,26 @@ spec:
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           ports:
+            # Metrics and health checks
             - name: metrics
               containerPort: {{ .Values.app.metricsPort }}
               protocol: TCP
+            # Loki proxy port (always enabled)
+            - name: loki
+              containerPort: 3100
+              protocol: TCP
+            {{- if .Values.monitoring.prometheus.namespace }}
+            # Prometheus proxy port (conditional)
+            - name: prometheus
+              containerPort: 9090
+              protocol: TCP
+            {{- end }}
+            {{- if and .Values.monitoring.remote.namespace .Values.monitoring.remote.service .Values.monitoring.remote.port }}
+            # Custom remote service port (conditional)
+            - name: remote
+              containerPort: {{ .Values.monitoring.remote.port }}
+              protocol: TCP
+            {{- end }}
           env:
             - name: DEBUG
               value: {{ .Values.app.debug | quote }}
@@ -44,6 +61,8 @@ spec:
               value: {{ .Values.app.metricsPort | quote }}
             - name: RANCHER_API_ENDPOINT
               value: {{ .Values.rancher.apiEndpoint | quote }}
+            - name: RANCHER_INSECURE_SKIP_VERIFY
+              value: {{ .Values.rancher.insecureSkipVerify | quote }}
             - name: CLUSTER_ID
               value: {{ .Values.rancher.clusterId | quote }}
             {{- if .Values.rancher.clusterName }}

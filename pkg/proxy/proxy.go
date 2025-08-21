@@ -1,6 +1,7 @@
 package proxy
 
 import (
+	"crypto/tls"
 	"fmt"
 	"io"
 	"net/http"
@@ -44,7 +45,14 @@ func BuildLokiURL() string {
 
 // TestServiceConnectivity tests if a service is reachable via Rancher proxy
 func TestServiceConnectivity(serviceURL, serviceName string) error {
-	client := &http.Client{Timeout: 10 * time.Second}
+	client := &http.Client{
+		Timeout: 10 * time.Second,
+		Transport: &http.Transport{
+			TLSClientConfig: &tls.Config{
+				InsecureSkipVerify: config.CFG.RancherInsecureSkipVerify,
+			},
+		},
+	}
 
 	// For Loki, test the /ready endpoint
 	testURL := serviceURL
@@ -110,7 +118,14 @@ func createProxyHandler(serviceURL, serviceName string) http.HandlerFunc {
 		proxyReq.SetBasicAuth(config.CFG.RancherApiAccessKey, config.CFG.RancherApiSecretKey)
 
 		// Create HTTP client with timeout
-		client := &http.Client{Timeout: 30 * time.Second}
+		client := &http.Client{
+			Timeout: 30 * time.Second,
+			Transport: &http.Transport{
+				TLSClientConfig: &tls.Config{
+					InsecureSkipVerify: config.CFG.RancherInsecureSkipVerify,
+				},
+			},
+		}
 
 		// Execute the proxy request
 		resp, err := client.Do(proxyReq)

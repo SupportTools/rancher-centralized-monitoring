@@ -5,13 +5,14 @@ import (
 )
 
 type Config struct {
-	Debug               bool
-	MetricsPort         string
-	RancherApiEndpoint  string
-	RancherApiAccessKey string
-	RancherApiSecretKey string
-	ClusterId           string
-	ClusterName         string
+	Debug                      bool
+	MetricsPort                string
+	RancherApiEndpoint         string
+	RancherApiAccessKey        string
+	RancherApiSecretKey        string
+	ClusterId                  string
+	ClusterName                string
+	RancherInsecureSkipVerify  bool
 
 	// Prometheus configuration
 	PrometheusNamespace string
@@ -33,13 +34,14 @@ var CFG Config
 
 func LoadConfigFromEnv() Config {
 	config := Config{
-		Debug:               parseEnvBool("DEBUG"),
-		MetricsPort:         getEnvOrDefault("METRICS_PORT", "9000"),
-		RancherApiEndpoint:  getEnvOrDefault("RANCHER_API_ENDPOINT", ""),
-		RancherApiAccessKey: getEnvOrDefault("RANCHER_API_ACCESS_KEY", ""),
-		RancherApiSecretKey: getEnvOrDefault("RANCHER_API_SECRET_KEY", ""),
-		ClusterId:           getEnvOrDefault("CLUSTER_ID", ""),
-		ClusterName:         getEnvOrDefault("CLUSTER_NAME", ""),
+		Debug:                     parseEnvBool("DEBUG"),
+		MetricsPort:               getEnvOrDefault("METRICS_PORT", "9000"),
+		RancherApiEndpoint:        getEnvOrDefault("RANCHER_API_ENDPOINT", ""),
+		RancherApiAccessKey:       getEnvOrDefault("RANCHER_API_ACCESS_KEY", ""),
+		RancherApiSecretKey:       getEnvOrDefault("RANCHER_API_SECRET_KEY", ""),
+		ClusterId:                 getEnvOrDefault("CLUSTER_ID", ""),
+		ClusterName:               getEnvOrDefault("CLUSTER_NAME", ""),
+		RancherInsecureSkipVerify: parseEnvBool("RANCHER_INSECURE_SKIP_VERIFY"),
 
 		// Prometheus configuration
 		PrometheusNamespace: getEnvOrDefault("PROMETHEUS_NAMESPACE", "cattle-monitoring-system"),

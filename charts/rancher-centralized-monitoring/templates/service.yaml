@@ -7,9 +7,29 @@ metadata:
 spec:
   type: {{ .Values.service.type }}
   ports:
-    - port: {{ .Values.service.port }}
-      targetPort: {{ .Values.service.targetPort }}
+    # Metrics and health checks
+    - port: {{ .Values.app.metricsPort }}
+      targetPort: {{ .Values.app.metricsPort }}
       protocol: TCP
       name: metrics
+    # Loki proxy port (always enabled)
+    - port: 3100
+      targetPort: 3100
+      protocol: TCP
+      name: loki
+    {{- if .Values.monitoring.prometheus.namespace }}
+    # Prometheus proxy port (conditional)
+    - port: 9090
+      targetPort: 9090
+      protocol: TCP
+      name: prometheus
+    {{- end }}
+    {{- if and .Values.monitoring.remote.namespace .Values.monitoring.remote.service .Values.monitoring.remote.port }}
+    # Custom remote service port (conditional)
+    - port: {{ .Values.monitoring.remote.port }}
+      targetPort: {{ .Values.monitoring.remote.port }}
+      protocol: TCP
+      name: remote
+    {{- end }}
   selector:
     {{- include "rancher-centralized-monitoring.selectorLabels" . | nindent 4 }}
