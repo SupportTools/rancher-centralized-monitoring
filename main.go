@@ -84,26 +84,109 @@ func main() {
 		}
 	}
 
-	// Setup HTTP endpoints
-	http.HandleFunc("/health", health.HealthzHandler())
-	http.HandleFunc("/ready", health.ReadyzHandler())
-	http.HandleFunc("/version", health.VersionHandler())
-	http.HandleFunc("/metrics", metrics.MetricsHandler())
+	// Setup metrics/health HTTP server (default port 9000)
+	metricsMux := http.NewServeMux()
+	metricsMux.HandleFunc("/health", health.HealthzHandler())
+	metricsMux.HandleFunc("/ready", health.ReadyzHandler())
+	metricsMux.HandleFunc("/version", health.VersionHandler())
+	metricsMux.HandleFunc("/metrics", metrics.MetricsHandler())
 
-	// Start HTTP server with timeouts (security: prevent slowloris attacks)
-	address := fmt.Sprintf(":%s", config.CFG.MetricsPort)
-	logger.Printf("Starting HTTP server on %s", address)
+	metricsAddress := fmt.Sprintf(":%s", config.CFG.MetricsPort)
+	logger.Printf("Starting metrics HTTP server on %s", metricsAddress)
 
-	server := &http.Server{
-		Addr:              address,
-		Handler:           nil,
+	metricsServer := &http.Server{
+		Addr:              metricsAddress,
+		Handler:           metricsMux,
 		ReadTimeout:       10 * time.Second,
 		WriteTimeout:      10 * time.Second,
 		IdleTimeout:       120 * time.Second,
 		ReadHeaderTimeout: 5 * time.Second,
 	}
 
-	if err := server.ListenAndServe(); err != nil {
-		logger.Fatalf("HTTP server failed to start: %v", err)
+	// Start metrics server in background
+	go func() {
+		if err := metricsServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			logger.Fatalf("Metrics HTTP server failed to start: %v", err)
+		}
+	}()
+
+	// Setup Prometheus proxy server on port 9090
+	if config.CFG.PrometheusNamespace != "" {
+		prometheusMux := http.NewServeMux()
+		prometheusMux.HandleFunc("/", proxy.PrometheusHandler())
+		
+		prometheusAddress := ":9090"
+		logger.Printf("Starting Prometheus proxy server on %s -> %s", prometheusAddress, proxy.BuildPrometheusURL())
+
+		prometheusServer := &http.Server{
+			Addr:              prometheusAddress,
+			Handler:           prometheusMux,
+			ReadTimeout:       30 * time.Second,
+			WriteTimeout:      30 * time.Second,
+			IdleTimeout:       120 * time.Second,
+			ReadHeaderTimeout: 10 * time.Second,
+		}
+
+		// Start Prometheus proxy server in background
+		go func() {
+			if err := prometheusServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+				logger.Fatalf("Prometheus proxy server failed to start: %v", err)
+			}
+		}()
 	}
+
+	// Setup Loki proxy server on port 3100
+	lokiMux := http.NewServeMux()
+	lokiMux.HandleFunc("/", proxy.LokiHandler())
+	
+	lokiAddress := ":3100"
+	logger.Printf("Starting Loki proxy server on %s -> %s", lokiAddress, proxy.BuildLokiURL())
+
+	lokiServer := &http.Server{
+		Addr:              lokiAddress,
+		Handler:           lokiMux,
+		ReadTimeout:       30 * time.Second,
+		WriteTimeout:      30 * time.Second,
+		IdleTimeout:       120 * time.Second,
+		ReadHeaderTimeout: 10 * time.Second,
+	}
+
+	// Start Loki proxy server in background
+	go func() {
+		if err := lokiServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			logger.Fatalf("Loki proxy server failed to start: %v", err)
+		}
+	}()
+
+	// Setup custom remote service proxy if configured
+	if config.CFG.RemoteNamespace != "" && config.CFG.RemoteService != "" && config.CFG.RemotePort != "" {
+		remoteMux := http.NewServeMux()
+		remoteMux.HandleFunc("/", proxy.RemoteServiceHandler())
+		
+		remoteAddress := fmt.Sprintf(":%s", config.CFG.RemotePort)
+		logger.Printf("Starting remote service proxy on %s -> %s", 
+			remoteAddress, 
+			proxy.BuildServiceProxyURL(config.CFG.RemoteNamespace, config.CFG.RemoteService, config.CFG.RemotePort))
+
+		remoteServer := &http.Server{
+			Addr:              remoteAddress,
+			Handler:           remoteMux,
+			ReadTimeout:       30 * time.Second,
+			WriteTimeout:      30 * time.Second,
+			IdleTimeout:       120 * time.Second,
+			ReadHeaderTimeout: 10 * time.Second,
+		}
+
+		// Start remote service proxy in background
+		go func() {
+			if err := remoteServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+				logger.Fatalf("Remote service proxy server failed to start: %v", err)
+			}
+		}()
+	}
+
+	logger.Println("All proxy servers started successfully")
+	
+	// Keep the main goroutine alive
+	select {}
 }

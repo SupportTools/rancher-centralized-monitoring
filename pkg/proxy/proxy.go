@@ -2,7 +2,9 @@ package proxy
 
 import (
 	"fmt"
+	"io"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/supporttools/rancher-centralized-monitoring/pkg/config"
@@ -76,4 +78,87 @@ func TestServiceConnectivity(serviceURL, serviceName string) error {
 
 	logger.Printf("Successfully connected to %s service", serviceName)
 	return nil
+}
+
+// createProxyHandler creates an HTTP handler that proxies requests to the specified service URL
+func createProxyHandler(serviceURL, serviceName string) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		// Build target URL by combining service URL with the request path
+		targetURL := strings.TrimSuffix(serviceURL, "/") + r.URL.Path
+		if r.URL.RawQuery != "" {
+			targetURL += "?" + r.URL.RawQuery
+		}
+
+		logger.Printf("Proxying %s request to %s: %s", serviceName, r.Method, targetURL)
+
+		// Create the proxy request
+		proxyReq, err := http.NewRequest(r.Method, targetURL, r.Body)
+		if err != nil {
+			logger.Printf("Error creating proxy request: %v", err)
+			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+			return
+		}
+
+		// Copy headers from original request
+		for name, values := range r.Header {
+			for _, value := range values {
+				proxyReq.Header.Add(name, value)
+			}
+		}
+
+		// Set Rancher authentication
+		proxyReq.SetBasicAuth(config.CFG.RancherApiAccessKey, config.CFG.RancherApiSecretKey)
+
+		// Create HTTP client with timeout
+		client := &http.Client{Timeout: 30 * time.Second}
+
+		// Execute the proxy request
+		resp, err := client.Do(proxyReq)
+		if err != nil {
+			logger.Printf("Error executing proxy request to %s: %v", serviceName, err)
+			http.Error(w, "Bad Gateway", http.StatusBadGateway)
+			return
+		}
+		defer resp.Body.Close()
+
+		// Copy response headers
+		for name, values := range resp.Header {
+			for _, value := range values {
+				w.Header().Add(name, value)
+			}
+		}
+
+		// Set response status
+		w.WriteHeader(resp.StatusCode)
+
+		// Copy response body
+		_, err = io.Copy(w, resp.Body)
+		if err != nil {
+			logger.Printf("Error copying response body from %s: %v", serviceName, err)
+		}
+	}
+}
+
+// PrometheusHandler returns an HTTP handler for proxying requests to Prometheus
+func PrometheusHandler() http.HandlerFunc {
+	prometheusURL := BuildPrometheusURL()
+	return createProxyHandler(prometheusURL, "prometheus")
+}
+
+// LokiHandler returns an HTTP handler for proxying requests to Loki
+func LokiHandler() http.HandlerFunc {
+	lokiURL := BuildLokiURL()
+	return createProxyHandler(lokiURL, "loki")
+}
+
+// RemoteServiceHandler returns an HTTP handler for proxying requests to a custom remote service
+func RemoteServiceHandler() http.HandlerFunc {
+	if config.CFG.RemoteNamespace == "" || config.CFG.RemoteService == "" || config.CFG.RemotePort == "" {
+		return func(w http.ResponseWriter, r *http.Request) {
+			http.Error(w, "Remote service not configured", http.StatusServiceUnavailable)
+		}
+	}
+	
+	remoteURL := BuildServiceProxyURL(config.CFG.RemoteNamespace, config.CFG.RemoteService, config.CFG.RemotePort)
+	return createProxyHandler(remoteURL, config.CFG.RemoteService)
 }
