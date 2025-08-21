@@ -1,16 +1,16 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "rancher-monitoring-relay.fullname" . }}
+  name: {{ include "rancher-centralized-monitoring.fullname" . }}
   labels:
-    {{- include "rancher-monitoring-relay.labels" . | nindent 4 }}
+    {{- include "rancher-centralized-monitoring.labels" . | nindent 4 }}
 spec:
   {{- if not .Values.autoscaling.enabled }}
   replicas: {{ .Values.replicaCount }}
   {{- end }}
   selector:
     matchLabels:
-      {{- include "rancher-monitoring-relay.selectorLabels" . | nindent 6 }}
+      {{- include "rancher-centralized-monitoring.selectorLabels" . | nindent 6 }}
   template:
     metadata:
       {{- with .Values.podAnnotations }}
@@ -18,13 +18,13 @@ spec:
         {{- toYaml . | nindent 8 }}
       {{- end }}
       labels:
-        {{- include "rancher-monitoring-relay.selectorLabels" . | nindent 8 }}
+        {{- include "rancher-centralized-monitoring.selectorLabels" . | nindent 8 }}
     spec:
       {{- with .Values.imagePullSecrets }}
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}
       {{- end }}
-      serviceAccountName: {{ include "rancher-monitoring-relay.serviceAccountName" . }}
+      serviceAccountName: {{ include "rancher-centralized-monitoring.serviceAccountName" . }}
       securityContext:
         {{- toYaml .Values.podSecurityContext | nindent 8 }}
       containers:
@@ -53,12 +53,12 @@ spec:
             - name: RANCHER_API_ACCESS_KEY
               valueFrom:
                 secretKeyRef:
-                  name: {{ include "rancher-monitoring-relay.secretName" . }}
+                  name: {{ include "rancher-centralized-monitoring.secretName" . }}
                   key: {{ .Values.rancher.auth.accessKeySecretKey }}
             - name: RANCHER_API_SECRET_KEY
               valueFrom:
                 secretKeyRef:
-                  name: {{ include "rancher-monitoring-relay.secretName" . }}
+                  name: {{ include "rancher-centralized-monitoring.secretName" . }}
                   key: {{ .Values.rancher.auth.secretKeySecretKey }}
             # Prometheus configuration
             - name: PROMETHEUS_NAMESPACE
