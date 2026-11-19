@@ -5,14 +5,14 @@ import (
 )
 
 type Config struct {
-	Debug                      bool
-	MetricsPort                string
-	RancherApiEndpoint         string
-	RancherApiAccessKey        string
-	RancherApiSecretKey        string
-	ClusterId                  string
-	ClusterName                string
-	RancherInsecureSkipVerify  bool
+	Debug                     bool
+	MetricsPort               string
+	RancherApiEndpoint        string
+	RancherApiAccessKey       string
+	RancherApiSecretKey       string
+	ClusterId                 string
+	ClusterName               string
+	RancherInsecureSkipVerify bool
 
 	// Prometheus configuration
 	PrometheusNamespace string

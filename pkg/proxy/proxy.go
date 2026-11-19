@@ -49,7 +49,7 @@ func TestServiceConnectivity(serviceURL, serviceName string) error {
 		Timeout: 10 * time.Second,
 		Transport: &http.Transport{
 			TLSClientConfig: &tls.Config{
-				InsecureSkipVerify: config.CFG.RancherInsecureSkipVerify,
+				InsecureSkipVerify: config.CFG.RancherInsecureSkipVerify, // #nosec G402 -- opt-in env flag, default false
 			},
 		},
 	}
@@ -100,7 +100,8 @@ func createProxyHandler(serviceURL, serviceName string) http.HandlerFunc {
 		logger.Printf("Proxying %s request to %s: %s", serviceName, r.Method, targetURL)
 
 		// Create the proxy request
-		proxyReq, err := http.NewRequest(r.Method, targetURL, r.Body)
+		// Reverse proxy by design: the host is the configured serviceURL; only path and query come from the request.
+		proxyReq, err := http.NewRequest(r.Method, targetURL, r.Body) // #nosec G704 -- see above
 		if err != nil {
 			logger.Printf("Error creating proxy request: %v", err)
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
@@ -122,13 +123,14 @@ func createProxyHandler(serviceURL, serviceName string) http.HandlerFunc {
 			Timeout: 30 * time.Second,
 			Transport: &http.Transport{
 				TLSClientConfig: &tls.Config{
-					InsecureSkipVerify: config.CFG.RancherInsecureSkipVerify,
+					InsecureSkipVerify: config.CFG.RancherInsecureSkipVerify, // #nosec G402 -- opt-in env flag, default false
 				},
 			},
 		}
 
 		// Execute the proxy request
-		resp, err := client.Do(proxyReq)
+		// Reverse proxy by design: the host is the configured serviceURL; only path and query come from the request.
+		resp, err := client.Do(proxyReq) // #nosec G704 -- see above
 		if err != nil {
 			logger.Printf("Error executing proxy request to %s: %v", serviceName, err)
 			http.Error(w, "Bad Gateway", http.StatusBadGateway)
