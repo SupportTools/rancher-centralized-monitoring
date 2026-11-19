@@ -42,7 +42,7 @@ func main() {
 		Timeout: 10 * time.Second,
 		Transport: &http.Transport{
 			TLSClientConfig: &tls.Config{
-				InsecureSkipVerify: config.CFG.RancherInsecureSkipVerify,
+				InsecureSkipVerify: config.CFG.RancherInsecureSkipVerify, // #nosec G402 -- opt-in env flag, default false
 			},
 		},
 	}
